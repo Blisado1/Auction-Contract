@@ -1,1 +1,45 @@
+{ parameter unit ;
+  storage (pair (pair (timestamp %auction_end) (address %bidder)) (mutez %highest_bid)) ;
+  code { CDR ;
+         DUP ;
+         CAR ;
+         CAR ;
+         NOW ;
+         COMPARE ;
+         GT ;
+         IF { PUSH string "Sorry, Auction has ended" ; FAILWITH } {} ;
+         DUP ;
+         CDR ;
+         AMOUNT ;
+         COMPARE ;
+         LE ;
+         IF { PUSH string "Sorry your bid is lower than the current bid" ; FAILWITH }
+            {} ;
+         AMOUNT ;
+         SENDER ;
+         DUP 3 ;
+         CAR ;
+         CDR ;
+         CONTRACT unit ;
+         IF_NONE { PUSH string "Not a contract" ; FAILWITH } {} ;
+         DUP 4 ;
+         CDR ;
+         UNIT ;
+         TRANSFER_TOKENS ;
+         DIG 2 ;
+         DIG 3 ;
+         CAR ;
+         PAIR ;
+         DUP ;
+         CDR ;
+         DIG 3 ;
+         DIG 2 ;
+         CAR ;
+         CAR ;
+         PAIR ;
+         PAIR ;
+         NIL operation ;
+         DIG 2 ;
+         CONS ;
+         PAIR } }
 
