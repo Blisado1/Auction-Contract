@@ -1,43 +1,62 @@
 // defining the types
-
-type auction_storage = {
+type auction_data = {
+    item_name : string;
     auction_end : timestamp;
     highest_bid : tez;
-    bidder : address;
+    highest_bidder : address;
+    no_of_bids : nat;
 }
+
+type auction_storage = (nat, auction_data) map
+
 type return = operation list * auction_storage
 
 let owner_address : address = 
     ("tz1Wv5x5MWbBBYPD6JB6ZTZfWNfg9SsTuy9h" : address)
 
-let main (_parameter, auction_storage : unit * auction_storage) : return =
+let main (item_index, auction_storage : nat * auction_storage) : return =
+
+    // Using pattern matching to get a particular item auction from auction storage
+    let auction : auction_data =
+        match Map.find_opt (item_index) auction_storage with
+        | Some a -> a
+        | None -> (failwith "Item auction not found" : auction_data)
+    in
     
     // check if the auction has ended
-    let () = if Tezos.now > auction_storage.auction_end then
+    let () = if Tezos.now > auction.auction_end then
         failwith "Sorry, Auction has ended"
     in
 
     // Check if amount sent is lower than the highest bid
-    let () = if Tezos.amount <= auction_storage.highest_bid then
+    let () = if Tezos.amount <= auction.highest_bid then
         failwith "Sorry your bid is lower than the current bid"
     in
 
     // Store the records of the new bid in variables
     let new_bid : tez = Tezos.amount in
 
-    let new_bidder : address= Tezos.sender in
+    let new_bidder : address = Tezos.sender in
 
     // Get details of previous bid details from storage
-    let previous_bidder : address = auction_storage.bidder in
+    let previous_bidder : address = auction.highest_bidder in
 
-    let previous_bid : tez = auction_storage.highest_bid in
+    let previous_bid : tez = auction.highest_bid in
 
    
-    // Set new highest bid in storage
-    let auction_storage = { auction_storage with 
+    // Update auction data with new auction details
+    let updated_auction_data = { auction with 
         highest_bid =  new_bid; 
-        bidder = new_bidder;
+        highest_bidder = new_bidder;
+        no_of_bids = abs (auction.no_of_bids + 1) 
         } 
+    in
+
+    // Update in storage
+    let auction_storage = Map.update
+        item_index 
+        (Some updated_auction_data)
+        auction_storage
     in
 
     // Refund previous bid to previous bidder
@@ -57,8 +76,4 @@ let main (_parameter, auction_storage : unit * auction_storage) : return =
         [payout_operation] 
     in
 
-    ((operations: operation list), auction_storage)
-
-
-
-
+((operations: operation list), auction_storage)
